@@ -28,7 +28,7 @@ module Shipping
 			b = request_access
 			b.instruct!
 
-			b.RatingServiceSelectionRequest { |b| 
+			b.RatingServiceSelectionRequest { |b|
 				b.Request { |b|
 					b.TransactionReference { |b|
 						b.CustomerContext 'Rating and Service'
@@ -62,7 +62,7 @@ module Shipping
 					b.Service { |b| # The service code
 						b.Code ServiceTypes[@service_type] || '03' # defaults to ground
 					}
-					b.Package { |b| # Package Details					
+					b.Package { |b| # Package Details
 						b.PackagingType { |b|
 							b.Code PackageTypes[@packaging_type] || '02' # defaults to 'your packaging'
 							b.Description 'Package'
@@ -101,18 +101,18 @@ module Shipping
 
 		# See http://www.ups.com/gec/techdocs/pdf/dtk_AddrValidateXML_V1.zip for API info
 		def valid_address?( delta = 1.0 )
-			@required = [:ups_license_number, :ups_user, :ups_password]         
+			@required = [:ups_license_number, :ups_user, :ups_password]
 			@ups_url ||= "https://wwwcie.ups.com/ups.app/xml"
 			@ups_tool = '/AV'
-			
+
 			state = nil
-			if @state:
+			if @state
 				state = STATES.has_value?(@state.downcase) ? STATES.index(@state.downcase) : @state
 			end
-			
+
 			b = request_access
 			b.instruct!
-			
+
 			b.AddressValidationRequest {|b|
 				b.Request {|b|
 					b.RequestAction "AV"
@@ -140,17 +140,17 @@ module Shipping
 		end
 
 		# See Ship-WW-XML.pdf for API info
-		# @image_type = [GIF|EPL]	
+		# @image_type = [GIF|EPL]
 		def label
 			@required = [:ups_license_number, :ups_shipper_number, :ups_user, :ups_password]
 			@required +=  [:phone, :email, :company, :address, :city, :state, :zip]
 			@required += [:sender_phone, :sender_email, :sender_company, :sender_address, :sender_city, :sender_state, :sender_zip ]
 			@ups_url ||= "https://wwwcie.ups.com/ups.app/xml"
 			@ups_tool = '/ShipConfirm'
-			
+
 			state = STATES.has_value?(@state.downcase) ? STATES.index(@state.downcase).upcase : @state.upcase unless @state.blank?
 			sender_state = STATES.has_value?(@sender_state.downcase) ? STATES.index(@sender_state.downcase).upcase : @sender_state.upcase unless @sender_state.blank?
-			
+
 			# make ConfirmRequest and get Confirm Response
 			b = request_access
 			b.instruct!
@@ -198,7 +198,7 @@ module Shipping
 					}
 					b.PaymentInformation { |b|
 						pay_type = PaymentTypes[@pay_type] || 'Prepaid'
-						
+
 						if pay_type == 'Prepaid'
 							b.Prepaid { |b|
 								b.BillShipper { |b|
@@ -230,7 +230,7 @@ module Shipping
 					b.Service { |b| # The service code
 						b.Code ServiceTypes[@service_type] || '03' # defaults to ground
 					}
-					b.Package { |b| # Package Details					
+					b.Package { |b| # Package Details
 						b.PackagingType { |b|
 							b.Code PackageTypes[@packaging_type] || '02' # defaults to 'your packaging'
 							b.Description 'Package'
@@ -259,7 +259,7 @@ module Shipping
 				}
 				b.LabelSpecification { |b|
 					image_type = @image_type || 'GIF' # default to GIF
-					
+
 					b.LabelPrintMethod { |b|
 						b.Code image_type
 					}
@@ -278,7 +278,7 @@ module Shipping
 					end
 				}
 			}
-			
+
 			# get ConfirmResponse
 			get_response @ups_url + @ups_tool
 			begin
@@ -289,7 +289,7 @@ module Shipping
 
 			# make AcceptRequest and get AcceptResponse
 			@ups_tool = '/ShipAccept'
-			
+
 			b = request_access
 			b.instruct!
 
@@ -303,12 +303,12 @@ module Shipping
 				}
 				b.ShipmentDigest shipment_digest
 			}
-			
+
 			# get AcceptResponse
 			get_response @ups_url + @ups_tool
-			
-			begin  
-				response = Hash.new       
+
+			begin
+				response = Hash.new
 				response[:tracking_number] = REXML::XPath.first(@response, "//ShipmentAcceptResponse/ShipmentResults/PackageResults/TrackingNumber").text
 				response[:encoded_image] = REXML::XPath.first(@response, "//ShipmentAcceptResponse/ShipmentResults/PackageResults/LabelImage/GraphicImage").text
 				response[:image] = Tempfile.new("shipping_label")
@@ -322,11 +322,11 @@ module Shipping
 			def response.method_missing(name, *args)
 				has_key?(name) ? self[name] : super
 			end
-			
+
 			# don't allow people to edit the response
 			response.freeze
 		end
-		
+
 		def void(tracking_number)
 			@required = [:ups_license_number, :ups_shipper_number, :ups_user, :ups_password]
 			@ups_url ||= "https://wwwcie.ups.com/ups.app/xml"
@@ -346,7 +346,7 @@ module Shipping
 				}
 				b.ShipmentIdentificationNumber tracking_number
 			}
-			
+
 			# get VoidResponse
 			get_response @ups_url + @ups_tool
 			status = REXML::XPath.first(@response, '//VoidShipmentResponse/Response/ResponseStatusCode').text
@@ -368,13 +368,13 @@ module Shipping
 			}
 			return b
 		end
-		
+
 		def get_error
 			return if @response.class != REXML::Document
 
 			error = REXML::XPath.first(@response, '//*/Response/Error')
 			return if !error
-			
+
 			severity = REXML::XPath.first(error, '//ErrorSeverity').text
 			code = REXML::XPath.first(error, '//ErrorCode').text
 			description = REXML::XPath.first(error, '//ErrorDescription').text
@@ -423,10 +423,10 @@ module Shipping
 
 		CustomerTypes = {
 			'wholesale' => '01',
-			'ocassional' => '02',
+			'occasional' => '02',
 			'retail' => '04'
 		}
-		
+
 		PaymentTypes = {
 			'prepaid' => 'Prepaid',
 			'consignee' => 'Consignee', # TODO: Implement
