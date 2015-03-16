@@ -1,5 +1,5 @@
 Gem::Specification.new do |s|
-  s.name = "contacts"
+  s.name = "shipping"
   s.version = "1.6.0"
   s.date = "2008-11-25"
   s.summary = "A general shipping module to find out the shipping prices via UPS or FedEx"
